@@ -13,6 +13,10 @@
 #include <SPI.h>
 #include <LoRa.h>
 
+//      GPS
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+
 //      OLED Display
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -41,7 +45,7 @@
 #if ZONE == 0 // ASIA
     #define BAND            (433E6)
 #elif ZONE == 1 // EUROPE
-    #define BAND            (866E6)
+    #define BAND            (868E6)
 #elif ZONE == 2 // NORTH AMERICA
     #define BAND            (915E6)
 #else
@@ -64,12 +68,6 @@ void write_lora_packet(String data)
   LoRa.endPacket();
 }
 
-String format_position_to_json(double longitude, double latitude)
-{
-    char data[128];
-    sprintf(data, "{\"longitude\":%f,\"latitude\":%f}", longitude, latitude);
-    return data;
-}
 
 void die()
 {
@@ -77,6 +75,87 @@ void die()
 }
 
 // --- Classes --- //
+class IDataFragment
+{
+    public:
+        virtual void update() = 0;
+};
+
+class Position : public IDataFragment
+{
+    public:
+        Position() : m_ss(16, 17) // RX, TX
+        {
+           
+        }
+
+        bool begin() 
+        {
+            m_ss.begin(9600);  
+            clear_buffer();
+        }
+        
+        inline double Longitude() const { return m_longitude; }
+        inline double Latitude() const { return m_latitude; }
+        
+        void update() override
+        {
+            while(m_ss.available())
+            {
+                m_buffer[m_messageLength++] = m_ss.read();
+                if(m_messageLength == 128)
+                    break;
+
+                Serial.write(m_buffer, m_messageLength);
+                clear_buffer();
+            }
+        }
+
+    private:
+        void clear_buffer()
+        {
+            for(auto i = 0; i < m_messageLength; i ++)
+            {
+                m_buffer[i] = '\0';
+            }
+
+            m_messageLength = 0;
+        }
+        
+    private:
+        double m_longitude { 50.62021924615207 };
+        double m_latitude { 5.582367411365839 };
+        unsigned char m_buffer[128];
+        size_t m_messageLength { 128 };
+        TinyGPSPlus m_gps;
+        SoftwareSerial m_ss;
+};
+
+class ISerializable
+{
+    public:
+        virtual String to_json() = 0;
+};
+
+class Message : public ISerializable
+{
+    public:
+        Message(Position& position) : m_position(position)
+        {
+          
+        }
+        
+        String to_json() override
+        {
+            char data[128];
+            sprintf(data, "{\"longitude\":%f,\"latitude\":%f}", m_position.Longitude(), m_position.Latitude());
+            return data;
+        }
+
+    private:
+        Position &m_position;
+};
+
 class LoRaTransmitter
 {
     public:
@@ -190,6 +269,7 @@ class OledDisplay
 // --- Global Variables --- //
 auto display = OledDisplay(SCREEN_WIDTH, SCREEN_HEIGHT, OLED_RST, 1);
 auto transmitter = LoRaTransmitter(BAND);
+Position position;
 
 // --- Main Code ---//
 void setup() 
@@ -213,13 +293,24 @@ void setup()
     }
 
     display.push_line("LoRa Initializing OK!");
+
+    if(!position.begin())
+    {
+        Serial.println("Starting GPS Module failed!");
+    }
+    
     delay(2000);
 }
 
 void loop() 
 {
     //Send LoRa packet to receiver
-    auto data = format_position_to_json(10.0025, 156.18994);
+    // auto data = format_position_to_json(10.0025, 156.18994);
+    Message msg(position);
+    position.update();
+    
+    auto data = msg.to_json();
+    // auto data = "Salut les benz !\r\n";
     transmitter.write(data);
 
     display.set_line(3);
