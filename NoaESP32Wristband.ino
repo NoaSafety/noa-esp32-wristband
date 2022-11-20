@@ -14,8 +14,12 @@
 #include <LoRa.h>
 
 //      GPS
-#include <TinyGPS++.h>
+//#include <TinyGPS++.h>
 #include <SoftwareSerial.h>
+
+//      PulseSensor
+#define USE_ARDUINO_INTERRUPTS true
+#include <PulseSensorPlayground.h>
 
 //      OLED Display
 #include <Wire.h>
@@ -33,6 +37,13 @@
 #define SS                  (18)
 #define RST                 (14)
 #define DIO0                (26)
+
+//      GPS Pins
+#define GPS_RX              (16)
+#define GPS_TX              (17)
+
+//      Heartbeat Sensor Pins
+#define HEART_BEAT_PIN      (34) // ADC1_CH6
 
 /*      GEOGRAPHIC ZONES ---
  *          You can choose between: 
@@ -61,14 +72,6 @@
 #define SCREEN_HEIGHT       (64) // in pixels
 
 // --- Functions --- //
-void write_lora_packet(String data)
-{
-  LoRa.beginPacket();
-  LoRa.print(data);
-  LoRa.endPacket();
-}
-
-
 void die()
 {
     for(;;);
@@ -91,8 +94,9 @@ class Position : public IDataFragment
 
         bool begin() 
         {
-            m_ss.begin(9600);  
             clear_buffer();
+            m_ss.begin(9600);  
+            return true;
         }
         
         inline double Longitude() const { return m_longitude; }
@@ -123,11 +127,11 @@ class Position : public IDataFragment
         }
         
     private:
-        double m_longitude { 50.62021924615207 };
-        double m_latitude { 5.582367411365839 };
+        double m_latitude { 50.62021924615207 };
+        double m_longitude { 5.582367411365839 };
         unsigned char m_buffer[128];
         size_t m_messageLength { 128 };
-        TinyGPSPlus m_gps;
+        //TinyGPSPlus m_gps;
         SoftwareSerial m_ss;
 };
 
@@ -154,6 +158,53 @@ class Message : public ISerializable
 
     private:
         Position &m_position;
+};
+
+class HeartBeatSensor
+{
+    public:
+        HeartBeatSensor(int pin, int threshold = 550) :
+            m_pin(pin),
+            m_threshold(threshold)
+        {
+        
+        }
+
+        bool begin()
+        {
+            m_pulseSensor.analogInput(m_pin);
+            /*m_pulseSensor.blinkOnPulse(PULSE_BLINK);
+            m_pulseSensor.fadeOnPulse(PULSE_FADE);*/
+            
+            m_pulseSensor.setSerial(Serial);
+            m_pulseSensor.setOutputType(SERIAL_PLOTTER);
+            m_pulseSensor.setThreshold(m_threshold);
+            return true;
+        }
+
+        void output()
+        {
+            m_pulseSensor.outputSample();
+        }
+
+        void output_beat()
+        {
+            if(m_pulseSensor.sawStartOfBeat())
+            {
+                m_pulseSensor.outputBeat();
+            }
+        }
+
+        inline int read()
+        {
+            // return analogRead(m_pin);
+            return m_pulseSensor.getLatestSample();
+        }
+        
+    private:
+        int m_pin;
+        int m_threshold;
+        PulseSensorPlayground m_pulseSensor;
 };
 
 class LoRaTransmitter
@@ -270,6 +321,7 @@ class OledDisplay
 auto display = OledDisplay(SCREEN_WIDTH, SCREEN_HEIGHT, OLED_RST, 1);
 auto transmitter = LoRaTransmitter(BAND);
 Position position;
+auto heartBeatSensor = HeartBeatSensor(HEART_BEAT_PIN);
 
 // --- Main Code ---//
 void setup() 
@@ -304,6 +356,11 @@ void setup()
 
 void loop() 
 {
+    /*heartBeatSensor.output();
+    //Send LoRa packet to receiver
+    Serial.println("read heartbeat");
+    auto beat = heartBeatSensor.read();*/
+    
     //Send LoRa packet to receiver
     // auto data = format_position_to_json(10.0025, 156.18994);
     Message msg(position);
