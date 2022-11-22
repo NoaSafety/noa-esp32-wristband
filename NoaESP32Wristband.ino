@@ -9,25 +9,24 @@
 ******************************************/
 
 // --- Libraries --- //
-//      GPS
 #include "Position.h"
-
-//      LoRa
 #include "LoRaTransmitter.h"
-
-//      PulseSensor
 #include "HeartBeatSensor.h"
-
-//      OLED Display
 #include "OledDisplay.h"
-
-//      RFID Card
 #include <MFRC522.h>
-
-//      C Variadic functions
 #include "Message.h"
+#include <pthread.h>
 
 // --- Common Constants ---//
+//      LED Pin
+#define LED_PIN             (15)
+
+//      Button Pin
+#define BUTTON_PIN          (35)
+
+//      Buzzer Pin
+#define BUZZER_PIN          (19)
+
 //      RFID Pins
 #define RFID_RST_PIN        (0)
 #define RFID_SS_PIN         (5)
@@ -41,8 +40,11 @@
 #define LORA_DIO0_PIN       (26)
         
 //      GPS Pins
-#define GPS_RX_PIN          (16)
-#define GPS_TX_PIN          (17)
+//#define GPS_RX_PIN          (16)
+//#define GPS_TX_PIN          (17)
+
+#define GPS_RX_PIN          (3)
+#define GPS_TX_PIN          (1)
 
 //      Heartbeat Sensor Pins
 #define HEART_BEAT_PIN      (34) // ADC1_CH6
@@ -87,12 +89,13 @@ auto pos = Position(GPS_RX_PIN, GPS_TX_PIN, 50.62021924615207, 5.582367411365839
 auto heartBeatSensor = HeartBeatSensor(HEART_BEAT_PIN);
 MFRC522::MIFARE_Key key;
 auto rfid_reader = MFRC522(RFID_SS_PIN, RFID_RST_PIN);
+auto enabled = false;
 
 // --- Main Code ---//
 void setup() 
 {
     // Initialize Serial Monitor
-    Serial.begin(115200);
+    Serial.begin(9600);
 
     // SPI
     SPI.begin();
@@ -121,25 +124,79 @@ void setup()
     }
     
     delay(2000);
+
+    // Button
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(LED_PIN, OUTPUT);
+    pinMode(BUZZER_PIN, OUTPUT);
+}
+
+unsigned long previousMillis = 0;        // will store last time LED was updated
+unsigned long lastEmission = 0;
+int previousButtonState = LOW;
+
+void switch_state()
+{
+    enabled = !enabled;
+
+    if(enabled)
+    {
+        Serial.println("Toggle On");
+        digitalWrite(LED_PIN, HIGH);
+        digitalWrite(BUZZER_PIN, HIGH);
+    }
+    else
+    {
+        Serial.println("Toggle Off");
+        digitalWrite(LED_PIN, LOW);
+        digitalWrite(BUZZER_PIN, LOW);
+    }
 }
 
 void loop() 
 {
+    unsigned long currentMillis = millis();
+    unsigned long deltaTime = currentMillis - previousMillis;
+
+    auto buttonState = digitalRead(BUTTON_PIN);
+    auto pressed = buttonState == HIGH;
+
+    if(pressed && previousButtonState != buttonState)
+    {
+        switch_state();
+    }
+
+    previousButtonState = buttonState;
+    
     /*heartBeatSensor.output();
     //Send LoRa packet to receiver
     Serial.println("read heartbeat");
     auto beat = heartBeatSensor.read();*/
+    /* digitalWrite(LED_PIN, HIGH);
+
+    delay(1000);
+
+    digitalWrite(LED_PIN, LOW); */
     
-    //Send LoRa packet to receiver
-    Message msg(pos);
     pos.update();
     
-    auto data = msg.to_json();
-    transmitter.write(data);
+    //Send LoRa packet to receiver
+    if(enabled)
+    {
+        auto deltaEmission = currentMillis - lastEmission;
+        if(deltaEmission > 5000)
+        {
+            Message msg(pos);
+            
+            auto data = msg.to_json();
+            transmitter.write(data);
+        
+            display.set_line(3);
+            display.push_line("Sent:");
+            display.push_line(data);
+            lastEmission = currentMillis;
+        }
+    }
 
-    display.set_line(3);
-    display.push_line("Sent:");
-    display.push_line(data);
-
-    delay(10000);
+    previousMillis = currentMillis;
 }
