@@ -1,8 +1,11 @@
+#include <PulseSensorPlayground.h>
+
 #ifndef HEARTBEATSENSOR_INCLUDED
 #define HEARTBEATSENSOR_INCLUDED
 
-#define USE_ARDUINO_INTERRUPTS true
-#include <PulseSensorPlayground.h>
+#ifndef USE_ARDUINO_INTERRUPTS
+    #define USE_ARDUINO_INTERRUPTS true
+#endif
 
 class HeartBeatSensor
 {
@@ -17,36 +20,32 @@ class HeartBeatSensor
         bool begin()
         {
             m_pulseSensor.analogInput(m_pin);
-            /*m_pulseSensor.blinkOnPulse(PULSE_BLINK);
-            m_pulseSensor.fadeOnPulse(PULSE_FADE);*/
-            
-            m_pulseSensor.setSerial(Serial);
             m_pulseSensor.setOutputType(SERIAL_PLOTTER);
             m_pulseSensor.setThreshold(m_threshold);
-            return true;
+            return m_pulseSensor.begin();
         }
 
-        void output()
+        void update()
         {
-            m_pulseSensor.outputSample();
+            auto test = analogRead(m_pin);
+            Serial.print(test);
+            Serial.write(" - ");
+            m_beat = m_pulseSensor.getBeatsPerMinute();
+            Serial.write("Heartbeat: ");
+            Serial.println(m_beat);
+
+            if(!m_pulseSensor.sawStartOfBeat())
+                m_beat = 0;
         }
 
-        void output_beat()
+        inline int heartbeat()
         {
-            if(m_pulseSensor.sawStartOfBeat())
-            {
-                m_pulseSensor.outputBeat();
-            }
-        }
-
-        inline int read()
-        {
-            // return analogRead(m_pin);
-            return m_pulseSensor.getLatestSample();
+            return m_beat;
         }
         
     private:
         int m_pin;
+        int m_beat;
         int m_threshold;
         PulseSensorPlayground m_pulseSensor;
 };

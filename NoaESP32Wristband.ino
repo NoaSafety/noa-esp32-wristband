@@ -7,6 +7,9 @@
   Proudly written in glorious Europe
   
 ******************************************/
+// --- PREPROCESSOR --- //
+#define USE_ARDUINO_INTERRUPTS false
+
 
 // --- Libraries --- //
 #include "Position.h"
@@ -15,12 +18,8 @@
 #include "OledDisplay.h"
 #include <MFRC522.h>
 #include "Message.h"
-#include <pthread.h>
 
 // --- Common Constants ---//
-//      LED Pin
-#define LED_PIN             (15)
-
 //      Button Pin
 #define BUTTON_PIN          (35)
 
@@ -43,8 +42,8 @@
 //#define GPS_RX_PIN          (16)
 //#define GPS_TX_PIN          (17)
 
-#define GPS_RX_PIN          (3)
-#define GPS_TX_PIN          (1)
+#define GPS_RX_PIN          (34)
+#define GPS_TX_PIN          (38)
 
 //      Heartbeat Sensor Pins
 #define HEART_BEAT_PIN      (34) // ADC1_CH6
@@ -75,12 +74,6 @@
 #define SCREEN_WIDTH        (128) // in pixels
 #define SCREEN_HEIGHT       (64) // in pixels
 
-// --- Functions --- //
-void die()
-{
-    for(;;);
-}
-
 // --- Global Variables --- //
 //      LoRa Pins
 auto display = OledDisplay(SCREEN_WIDTH, SCREEN_HEIGHT, OLED_RST, 1, OLED_SDA_PIN, OLED_SCL_PIN);
@@ -90,6 +83,39 @@ auto heartBeatSensor = HeartBeatSensor(HEART_BEAT_PIN);
 MFRC522::MIFARE_Key key;
 auto rfid_reader = MFRC522(RFID_SS_PIN, RFID_RST_PIN);
 auto enabled = false;
+
+
+// --- Functions --- //
+void die(byte code)
+{
+    display.clear();
+    display.set_line(0);
+
+    display.push_line("General failure:");
+    switch(code)
+    {
+        case 0x01: // LoRa failed
+            display.push_line("LoRa module init (0x01)");
+            Serial.println("Starting LoRa failed!");
+            break;
+        case 0x02:
+            display.push_line("GPS module init (0x02)");
+            Serial.println("GPS module init (0x02)");
+            break;
+        case 0x03:
+            display.push_line("Heartbeat sensor init (0x03)");
+            Serial.println("Heartbeat sensor init (0x03)");
+            break;
+        case 0x04:
+            display.push_line("SSD1306 allocation failed (0x04)");
+            Serial.println("SSD1306 allocation failed (0x04)");
+            break;
+        case 0x05:
+            break;
+    }
+    
+    for(;;);
+}
 
 // --- Main Code ---//
 void setup() 
@@ -102,32 +128,28 @@ void setup()
 
     // Initialize OLED
     if(!display.begin(OLED_RST)) 
-    { 
-        Serial.println(F("SSD1306 allocation failed"));
-        die();
-    }
+        die(0x04);
+    
 
     display.push_line("Initializing...");
     display.push_line("Noa - Keep safe!");
 
     if(!transmitter.begin()) 
-    {
-        Serial.println("Starting LoRa failed!");
-        die();
-    }
+        die(0x01);
 
     display.push_line("LoRa Initializing OK!");
 
     if(!pos.begin())
-    {
-        Serial.println("Starting GPS Module failed!");
-    }
+        die(0x02);
+
+    if(!heartBeatSensor.begin())
+        die(0x03);
+    
     
     delay(2000);
 
     // Button
     pinMode(BUTTON_PIN, INPUT_PULLUP);
-    pinMode(LED_PIN, OUTPUT);
     pinMode(BUZZER_PIN, OUTPUT);
 }
 
@@ -142,13 +164,11 @@ void switch_state()
     if(enabled)
     {
         Serial.println("Toggle On");
-        digitalWrite(LED_PIN, HIGH);
         digitalWrite(BUZZER_PIN, HIGH);
     }
     else
     {
         Serial.println("Toggle Off");
-        digitalWrite(LED_PIN, LOW);
         digitalWrite(BUZZER_PIN, LOW);
     }
 }
@@ -172,13 +192,16 @@ void loop()
     //Send LoRa packet to receiver
     Serial.println("read heartbeat");
     auto beat = heartBeatSensor.read();*/
-    /* digitalWrite(LED_PIN, HIGH);
-
-    delay(1000);
-
-    digitalWrite(LED_PIN, LOW); */
     
-    pos.update();
+    // pos.update(); // Prend super longtemps ?
+    heartBeatSensor.update();
+
+    auto heartBeat = heartBeatSensor.heartbeat();
+    if(heartBeat)
+    {
+        Serial.print("❤: ");
+        Serial.println(heartBeat);
+    }
     
     //Send LoRa packet to receiver
     if(enabled)
@@ -198,5 +221,6 @@ void loop()
         }
     }
 
+    delay(20);
     previousMillis = currentMillis;
 }
