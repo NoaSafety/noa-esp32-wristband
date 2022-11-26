@@ -8,7 +8,8 @@
 class OledDisplay
 {
     public:
-        OledDisplay(int width, int height, int resetPin, int size, int sda, int scl) : 
+        OledDisplay(StateManager& state, int width, int height, int resetPin, int size, int sda, int scl) : 
+            m_state(state),
             m_display(width, height, &Wire, resetPin),
             m_size(size),
             m_lineSize(size * 10),
@@ -56,7 +57,6 @@ class OledDisplay
             clear_line(m_line);
             m_display.setCursor(0, m_lineSize * m_line);
             m_display.print(text);
-            Serial.println(text);
             m_line ++;
             m_display.display();
         }
@@ -77,9 +77,22 @@ class OledDisplay
                 }
             }
         }
+
+        void refresh()
+        {
+            set_line(4);
+            if(m_state.isSOSMode())
+                push_line("SOS Mode: ON");
+            else
+                push_line("SOS Mode: OFF");
+
+            set_line(1);
+            push_line("UID: " + m_state.getUserId());
+        }
         
     private:
         Adafruit_SSD1306 m_display;
+        StateManager& m_state;
         int m_size;
         int m_lineSize;
         int m_line;
