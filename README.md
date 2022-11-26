@@ -12,4 +12,13 @@
 5. Code
 6. Press *Upload* to set your code
 
-#
+# Dependencies Requirement
+
+In order to compile NoaWristband, you'll need to install the following dependencies : 
+- Adafruit SSD1306 by Adafruit
+- LoRa by Sandeep Mistry
+- MFRC522 by Github Community
+- NDEF_MFRC522 by CLaus Maveke
+- PulseSensorPlayground Joel Murphy
+- TaskScheduler by Anatoli Arkhipenko
+- WPI430-VMA430 GPS
