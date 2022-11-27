@@ -13,12 +13,7 @@ class BuzzerSensor
 
         void checkBuzzer()
         {
-            if(m_state.isSOSMode()) 
-            {
-                digitalWrite(m_pin, HIGH);
-                delay(500);
-                digitalWrite(m_pin, LOW); 
-            }
+            digitalWrite(m_pin, m_state.isSOSMode() ? HIGH : LOW);
         }
 
     private:

@@ -76,7 +76,7 @@ auto ledSensor = LedSensor(stateManager, LED_PIN);
 Task lora_check_task(5000, TASK_FOREVER, [] {loraSender.checkLoRa(); });
 Task gps_check_task(5000, TASK_FOREVER, [] {gpsSensor.checkGPS(); });
 Task rfid_check_task(1000, TASK_FOREVER, [] {rfidReader.checkRFID(); });
-Task btn_check_task(50, TASK_FOREVER, [] {buttonSensor.checkButton(); });
+Task btn_check_task(20, TASK_FOREVER, [] {buttonSensor.checkButton(); });
 Task buzzer_check_task(500, TASK_FOREVER, [] {buzzerSensor.checkBuzzer(); });
 Task led_check_task(500, TASK_FOREVER, [] {ledSensor.checkLed(); });
 Task oled_refresh_task(1000, TASK_FOREVER, [] {display.refresh(); });
