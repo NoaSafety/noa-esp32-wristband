@@ -10,7 +10,6 @@
 class GPSSensor
 {
     public:
-
         GPSSensor(const GPSSensor& gpsSensor):
             m_state(gpsSensor.m_state),
             m_rx_pin(gpsSensor.m_rx_pin),
@@ -40,11 +39,11 @@ class GPSSensor
         
         void checkGPS()
         {
-            if (m_gps.getUBX_packet()) // If a valid GPS UBX data packet is received...
+            /*if (m_gps.getUBX_packet()) // If a valid GPS UBX data packet is received...
             {
                 m_gps.parse_ubx_data(); // Parse the new data  
                 m_state.setPosition((Position){ .Latitude = m_gps.location.latitude, .Longitude = m_gps.location.longitude});
-            } 
+            }*/
         }
 
     private:

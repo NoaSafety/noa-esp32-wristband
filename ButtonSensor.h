@@ -1,12 +1,14 @@
 #ifndef BUTTONSENSOR_INCLUDED
 #define BUTTONSENSOR_INCLUDED
 
+#include <functional>
+
 class ButtonSensor
 {
     public:
-        ButtonSensor(StateManager& state, int pin) :
-            m_state(state),
-            m_pin(pin)
+        ButtonSensor(int pin) :
+            m_pin(pin),
+            m_prevBtnState(LOW)
         {
             pinMode(m_pin, INPUT_PULLUP);
         }
@@ -15,14 +17,23 @@ class ButtonSensor
         {
             auto btnState = digitalRead(m_pin);
             if(btnState == LOW && btnState != m_prevBtnState)
-                m_state.toggleSOSMode();
+            {
+                if(m_onPressed)
+                    m_onPressed(btnState);
+            }
+            
             m_prevBtnState = btnState;
+        }
+
+        void setOnPressedListener(std::function<void(bool)> onPressed)
+        {
+            m_onPressed = std::move(onPressed);
         }
 
     private:
         int m_pin;
         int m_prevBtnState;
-        StateManager& m_state;
+        std::function<void(bool)> m_onPressed;
 };
 
 #endif

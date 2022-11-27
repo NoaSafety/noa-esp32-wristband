@@ -4,8 +4,9 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "IToggleSensor.h"
 
-class OledDisplay
+class OledDisplay : public IToggleSensor
 {
     public:
         OledDisplay(StateManager& state, int width, int height, int resetPin, int size, int sda, int scl) : 
@@ -17,7 +18,8 @@ class OledDisplay
             m_width(width),
             m_height(height),
             m_sda(sda),
-            m_scl(scl)
+            m_scl(scl),
+            m_enabled(false)
         {
             
         }
@@ -78,16 +80,26 @@ class OledDisplay
             }
         }
 
-        void refresh()
+        void update() override
         {
             set_line(4);
-            if(m_state.isSOSMode())
+            if(m_enabled)
                 push_line("SOS Mode: ON");
             else
                 push_line("SOS Mode: OFF");
 
             set_line(1);
             push_line("UID: " + m_state.getUserId());
+        }
+
+        void enable(bool ena) override
+        {
+            m_enabled = ena;
+        }
+
+        void toggle() override
+        {
+            enable(!m_enabled);
         }
         
     private:
@@ -100,6 +112,7 @@ class OledDisplay
         int m_height;
         int m_sda;
         int m_scl;
+        bool m_enabled;
 };
 
 #endif

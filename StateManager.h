@@ -1,12 +1,16 @@
 #include <Preferences.h>
 #include "Position.h"
+#include "IToggleSensor.h"
+#include <vector>
 
 #define USER_ID_KEY "USER_ID"
 
 class StateManager
 {
     public:
-        StateManager(Preferences& store) : m_store(store)
+        StateManager(Preferences& store) : 
+            m_store(store), 
+            m_sosToggled(false)
         {
           m_position = { .Latitude = 50.62021924615207, .Longitude = 5.582367411365839}; 
         }
@@ -27,7 +31,7 @@ class StateManager
             m_userId = userId;
         }
 
-        boolean isSOSMode()
+        inline bool isSOSMode() const
         {
             return m_sosToggled;
         }
@@ -35,9 +39,14 @@ class StateManager
         void toggleSOSMode()
         {
             m_sosToggled = !m_sosToggled;
+
+            for(const auto& toggleSensor : m_toggleSensors)
+            {
+                toggleSensor->enable(m_sosToggled);
+            }
         }
 
-        Position getPosition()
+        Position getPosition() const
         {
             return m_position;
         }
@@ -48,10 +57,23 @@ class StateManager
             m_position.Latitude = position.Latitude;
         }
 
+        void update()
+        {
+            for(const auto& toggleSensor : m_toggleSensors)
+            {
+                toggleSensor->update();
+            }
+        }
+
+        void addToggleSensor(std::shared_ptr<IToggleSensor> toggleSensor)
+        {
+            m_toggleSensors.emplace_back(std::move(toggleSensor));
+        }
+
     private:
         boolean m_sosToggled;
         String m_userId;
         Position m_position; 
         Preferences& m_store;
-
+        std::vector<std::shared_ptr<IToggleSensor>> m_toggleSensors;
 };

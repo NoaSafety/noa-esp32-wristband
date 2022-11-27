@@ -1,24 +1,49 @@
 #ifndef BUZZERSENSOR_INCLUDED
 #define BUZZERSENSOR_INCLUDED
 
-class BuzzerSensor
+#include "IDigitalWave.h"
+#include "IToggleSensor.h"
+
+class BuzzerSensor : public IToggleSensor
 {
     public:
-        BuzzerSensor(StateManager& state, int pin) :
-            m_state(state),
-            m_pin(pin)
+        BuzzerSensor(int pin, IDigitalWave& soundWave) :
+            m_pin(pin),
+            m_soundWave(soundWave),
+            m_enabled(false)
         {
             pinMode(m_pin, OUTPUT);
         }
-
-        void checkBuzzer()
+        
+        void enable(bool ena) override
         {
-            digitalWrite(m_pin, m_state.isSOSMode() ? HIGH : LOW);
+            if(!(m_enabled = ena))
+                digitalWrite(m_pin, LOW);
+        }
+
+        void toggle() override
+        {
+            enable(!m_enabled);
+        }
+
+        void update() override
+        {            
+            if(m_enabled)
+                digitalWrite(m_pin, getStateFromTime(millis()) ? HIGH : LOW);
         }
 
     private:
         int m_pin;
-        StateManager& m_state;
+        IDigitalWave& m_soundWave;
+        bool m_enabled;
+
+        bool getStateFromTime(unsigned long t) const
+        {
+            auto length = 4000;
+            auto moment = (int) (100 * (((double)(t % length)) / (double)length));
+
+            return m_soundWave.getSignal(moment);
+        }
 };
 
 #endif

@@ -12,6 +12,7 @@
 #define USE_ARDUINO_INTERRUPTS false
 
 // --- Libraries --- //
+#include <memory>
 #include <TaskScheduler.h>
 #include <Preferences.h>
 #include "StateManager.h"
@@ -25,6 +26,7 @@
 #include "RFIDReader.h"
 #include "Message.h"
 #include "Position.h"
+#include "SOSWave.h"
 
 // --- Constants --- //
 #define APP_KEY             ("NOA_WRISTBAND")
@@ -59,55 +61,58 @@
 #define LED_PIN             (13)
 
 // --- Global Variables --- //
-
 Scheduler runner;
 Preferences store;
+
+auto wave = SOSWave();
 auto stateManager = StateManager(store);
-auto display = OledDisplay(stateManager, SCREEN_WIDTH, SCREEN_HEIGHT, OLED_RST, 1, OLED_SDA_PIN, OLED_SCL_PIN);
-auto loraSender = LoRaSender(stateManager, LORA_BAND, LORA_SCK_PIN, LORA_MISO_PIN, LORA_MOSI_PIN, LORA_SS_PIN, LORA_RST_PIN, LORA_DIO0_PIN);
+
+auto loraSender = std::make_shared<LoRaSender>(stateManager, LORA_BAND, LORA_SCK_PIN, LORA_MISO_PIN, LORA_MOSI_PIN, LORA_SS_PIN, LORA_RST_PIN, LORA_DIO0_PIN);
+auto buzzerSensor = std::make_shared<BuzzerSensor>(BUZZER_PIN, wave);
+auto ledSensor = std::make_shared<LedSensor>(LED_PIN);
+auto display = std::make_shared<OledDisplay>(stateManager, SCREEN_WIDTH, SCREEN_HEIGHT, OLED_RST, 1, OLED_SDA_PIN, OLED_SCL_PIN);
+
 auto rfidReader = RFIDReader(stateManager, RFID_SCK_PIN, RFID_MISO_PIN, RFID_MOSI_PIN, RFID_SDA_PIN, RFID_RST_PIN);
 auto gpsSensor = GPSSensor(stateManager, GPS_RX_PIN, GPS_TX_PIN);
 auto heartBeatSensor = HeartBeatSensor(HEART_BEAT_PIN);
-auto buttonSensor = ButtonSensor(stateManager, BUTTON_PIN);
-auto buzzerSensor = BuzzerSensor(stateManager, BUZZER_PIN);
-auto ledSensor = LedSensor(stateManager, LED_PIN);
+auto buttonSensor = ButtonSensor(BUTTON_PIN);
 
 // --- Tasks --- //
-Task lora_check_task(5000, TASK_FOREVER, [] {loraSender.checkLoRa(); });
-Task gps_check_task(5000, TASK_FOREVER, [] {gpsSensor.checkGPS(); });
-Task rfid_check_task(1000, TASK_FOREVER, [] {rfidReader.checkRFID(); });
-Task btn_check_task(20, TASK_FOREVER, [] {buttonSensor.checkButton(); });
-Task buzzer_check_task(500, TASK_FOREVER, [] {buzzerSensor.checkBuzzer(); });
-Task led_check_task(500, TASK_FOREVER, [] {ledSensor.checkLed(); });
-Task oled_refresh_task(1000, TASK_FOREVER, [] {display.refresh(); });
+Task lora_check_task(5000, TASK_FOREVER, [] { loraSender->update(); });
+Task gps_check_task(5000, TASK_FOREVER, [] { gpsSensor.checkGPS(); });
+Task rfid_check_task(1000, TASK_FOREVER, [] { rfidReader.checkRFID(); });
+Task btn_check_task(20, TASK_FOREVER, [] { buttonSensor.checkButton(); });
+Task buzzer_check_task(20, TASK_FOREVER, [] { buzzerSensor->update(); });
+Task led_check_task(20, TASK_FOREVER, [] { ledSensor->update(); });
+Task oled_refresh_task(1000, TASK_FOREVER, [] { display->update(); });
 
 // --- Functions --- //
 void die(byte code)
 {
-    display.clear();
-    display.set_line(0);
+    display->clear();
+    display->set_line(0);
 
-    display.push_line("General failure:");
+    display->push_line("General failure:");
     switch(code)
     {
         case 0x01: // LoRa failed
-            display.push_line("LoRa module init (0x01)");
+            display->push_line("LoRa module init (0x01)");
             Serial.println("Starting LoRa failed!");
             break;
         case 0x02:
-            display.push_line("GPS module init (0x02)");
+            display->push_line("GPS module init (0x02)");
             Serial.println("GPS module init (0x02)");
             break;
         case 0x03:
-            display.push_line("Heartbeat sensor init (0x03)");
+            display->push_line("Heartbeat sensor init (0x03)");
             Serial.println("Heartbeat sensor init (0x03)");
             break;
         case 0x04:
-            display.push_line("SSD1306 allocation failed (0x04)");
+            display->push_line("SSD1306 allocation failed (0x04)");
             Serial.println("SSD1306 allocation failed (0x04)");
             break;
         case 0x05:
-            display.push_line("RFID module init (0x05)");
+            display->push_line("RFID module init (0x05)");
             Serial.println("RFID module init (0x05)");
             break;
         case 0x06:
@@ -126,17 +131,17 @@ void setup()
     store.begin(APP_KEY, false);
     stateManager.loadData();
         
-    if(!display.begin(OLED_RST)) 
+    if(!display->begin(OLED_RST)) 
         die(0x04);
         
-    display.set_line(0);
-    display.push_line("Initializing...");
+    display->set_line(0);
+    display->push_line("Initializing...");
 
-    if(!loraSender.begin()) 
+    if(!loraSender->begin()) 
         die(0x01);
 
-    if(!rfidReader.begin())
-        die(0x05);
+    /*if(!rfidReader.begin())
+        die(0x05);*/
 
     if(!gpsSensor.begin())
         die(0x02);
@@ -146,11 +151,21 @@ void setup()
     
     delay(2000); // Fake loading time for the sake of being absolutes code masters
 
-    display.set_line(0);
-    display.push_line("Initialization OK");
+    display->set_line(0);
+    display->push_line("Initialization OK");
 
-    display.set_line(1);
-    display.push_line(stateManager.getUserId());
+    display->set_line(1);
+    display->push_line(stateManager.getUserId());
+
+    stateManager.addToggleSensor(buzzerSensor);
+    stateManager.addToggleSensor(ledSensor);
+    stateManager.addToggleSensor(loraSender);
+    stateManager.addToggleSensor(display);
+
+    buttonSensor.setOnPressedListener([](bool pressed) 
+    { 
+        stateManager.toggleSOSMode(); 
+    });
 
     setup_tasks();
 }

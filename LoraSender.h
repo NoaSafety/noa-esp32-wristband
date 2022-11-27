@@ -4,8 +4,9 @@
 #include <SPI.h>
 #include <LoRa.h>
 #include "Message.h"
+#include "IToggleSensor.h"
 
-class LoRaSender
+class LoRaSender : public IToggleSensor
 {
     public:
         LoRaSender(StateManager& state, int band, int sck, int miso, int mosi, int ss, int rst, int dio0) :
@@ -15,7 +16,8 @@ class LoRaSender
             m_miso(miso),
             m_ss(ss),
             m_rst(rst),
-            m_dio0(dio0)
+            m_dio0(dio0),
+            m_enabled(false)
         {
             
         }
@@ -45,15 +47,25 @@ class LoRaSender
             Serial.println("[LORA] " + data);
         }
 
-        void checkLoRa()
+        void update() override
         {
-            if(m_state.isSOSMode()) 
+            if(m_enabled) 
             {
                 Serial.println(m_state.getUserId());
                 Message msg(m_state.getPosition(), m_state.getUserId());
                 auto data = msg.to_json();
                 write(data);
             }
+        }
+        
+        void enable(bool ena) override
+        {
+            m_enabled = ena;
+        }
+        
+        virtual void toggle() override
+        {
+            enable(!m_enabled);
         }
 
     private:
@@ -65,6 +77,7 @@ class LoRaSender
         int m_rst;
         int m_dio0;
         StateManager& m_state;
+        bool m_enabled;
 };
 
 #endif

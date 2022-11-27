@@ -1,24 +1,40 @@
 #ifndef LEDSENSOR_INCLUDED
 #define LEDSENSOR_INCLUDED
 
-class LedSensor
+#include "IToggleSensor.h"
+
+class LedSensor : public IToggleSensor
 {
     public:
-        LedSensor(StateManager& state, int pin) :
-            m_state(state),
-            m_pin(pin)
+        LedSensor(int pin) :
+            m_pin(pin),
+            m_on(false),
+            m_enabled(false)
         {
             pinMode(m_pin, OUTPUT);
         }
 
-        void checkLed()
+        void enable(bool ena) override
         {
-            digitalWrite(m_pin, m_state.isSOSMode() ? HIGH : LOW);
+            if(!(m_enabled = ena))
+                digitalWrite(m_pin, LOW);
+        }
+
+        void toggle() override
+        {
+            enable(!m_enabled);
+        }
+        
+        void update() override
+        {
+            if(m_enabled)
+                digitalWrite(m_pin, HIGH);
         }
 
     private:
         int m_pin;
-        StateManager& m_state;
+        bool m_on;
+        bool m_enabled;
 };
 
 #endif
