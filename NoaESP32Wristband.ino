@@ -90,7 +90,7 @@ Task btn_check_task(20, TASK_FOREVER, [] { buttonSensor.checkButton(); });
 Task buzzer_check_task(20, TASK_FOREVER, [] { buzzerSensor->update(); });
 Task led_check_task(20, TASK_FOREVER, [] { ledSensor->update(); });
 Task oled_refresh_task(1000, TASK_FOREVER, [] { display->update(); });
-Task axis_refresh_task(2000, TASK_FOREVER, [] { accelerometer->update(); });
+Task axis_refresh_task(50, TASK_FOREVER, [] { accelerometer.update(); });
 
 // --- Functions --- //
 void die(byte code)
@@ -176,6 +176,11 @@ void setup()
     buttonSensor.setOnPressedListener([](bool pressed) 
     { 
         stateManager.toggleSOSMode(); 
+    });
+
+    accelerometer.setOnShakedListener([]()
+    {
+        stateManager.enableSOSMode(true); 
     });
 
     setup_tasks();

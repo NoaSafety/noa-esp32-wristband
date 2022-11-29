@@ -1,18 +1,14 @@
 #ifndef ACCELEROMETER_INCLUDED
 #define ACCELEROMETER_INCLUDED
 
-#include <Wire.h>
+#include "Wire.h"
 #include <array>
+#include "CircularBuffer.h"
+#include <cmath>
+#include <functional>
 
 #define AXIS_ADDRESS                (0x68)
-
-char tmp_str[7]; // temporary variable used in convert function
-
-char* convert_int16_to_str(int16_t i) 
-{ // converts int16 to string. Moreover, resulting strings will have the same length in the debug monitor.
-  sprintf(tmp_str, "%6d", i);
-  return tmp_str;
-}
+#define MOVEMENT_LENGTH             (20)
 
 class Accelerometer 
 {
@@ -21,14 +17,19 @@ class Accelerometer
             m_sda(sda_pin), 
             m_scl(scl_pin)
         {
+            for(auto i = 0; i < MOVEMENT_LENGTH; i ++)
+                m_movements.push(0);
         }
 
-        void begin()
+        bool begin()
         {
+            // Wire.begin(m_sda, m_scl);
             Wire.beginTransmission(AXIS_ADDRESS);
             Wire.write(0x6B); // Power management (1) register
             Wire.write(0x00); // (Wake up)
             Wire.endTransmission(true);
+
+            return true;
         }
 
         void update()
@@ -38,24 +39,69 @@ class Accelerometer
             Wire.endTransmission(false); // Send restart and keep connection alive
 
             // Read data
-            auto registers = sizeof(uint16_t) * 7;
-            Wire.requestFrom(AXIS_ADDRESS, registers, true);
+            size_t registers = sizeof(int16_t) * 7;
+            Wire.requestFrom(static_cast<uint8_t>(AXIS_ADDRESS), registers, true); // 7 * 2 bytes (int16_t)
 
-            m_accelerometer[0] = Wire.read() << 8 | Wire.read();
-            m_accelerometer[1] = Wire.read() << 8 | Wire.read();
-            m_accelerometer[2] = Wire.read() << 8 | Wire.read();
+            read();
+            if(checkMovement() && m_onShaked)
+                m_onShaked();
+                
+            // print();
+        }
+
+        void setOnShakedListener(std::function<void(void)> onShaked)
+        {
+            m_onShaked = std::move(onShaked);
+        }
+
+        bool checkMovement()
+        {
+            auto totalMovement = 0;
+            for(auto i = 0; i < MOVEMENT_LENGTH; i ++)
+            {
+                totalMovement += m_movements.get(i);
+            }
+
+            Serial.println(totalMovement);
+
+            if(totalMovement < 1500000)
+            {
+                return false;
+            }
+
+            m_movements.clear();
+            return true;
+        }
+
+        void read()
+        {
+            std::array<int16_t, 3> accelerometer;
+            int16_t temperature;
+            std::array<int16_t, 3> gyroscope;
+            accelerometer[0] = Wire.read() << 8 | Wire.read();
+            accelerometer[1] = Wire.read() << 8 | Wire.read();
+            accelerometer[2] = Wire.read() << 8 | Wire.read();
             m_temperature = Wire.read() << 8 | Wire.read();
-            m_gyro[0] = Wire.read() << 8 | Wire.read();
-            m_gyro[1] = Wire.read() << 8 | Wire.read();
-            m_gyro[2] = Wire.read() << 8 | Wire.read();
+            gyroscope[0] = Wire.read() << 8 | Wire.read();
+            gyroscope[1] = Wire.read() << 8 | Wire.read();
+            gyroscope[2] = Wire.read() << 8 | Wire.read();
 
-            Serial.print("aX = "); Serial.print(convert_int16_to_str(m_accelerometer[0]));
-            Serial.print(" | aY = "); Serial.print(convert_int16_to_str(m_accelerometer[1]));
-            Serial.print(" | aZ = "); Serial.print(convert_int16_to_str(m_accelerometer[2]));
-            Serial.print(" | tmp = "); Serial.print(m_temperature/340.00+36.53);
-            Serial.print(" | gX = "); Serial.print(convert_int16_to_str(m_gyro[0]));
-            Serial.print(" | gY = "); Serial.print(convert_int16_to_str(m_gyro[1]));
-            Serial.print(" | gZ = "); Serial.print(convert_int16_to_str(m_gyro[2]));
+            unsigned int delta = abs(accelerometer[0] - m_accelerometer[0]) + abs(accelerometer[1] - m_accelerometer[1]) + abs(accelerometer[2] - m_accelerometer[2]);
+            m_movements.push(delta);
+            m_accelerometer = accelerometer;
+            m_gyro = gyroscope;
+            m_temperature = temperature;
+        }
+
+        void print()
+        {
+            Serial.print("Ax = "); Serial.print(m_accelerometer[0]);
+            Serial.print(", Ay = "); Serial.print(m_accelerometer[1]);
+            Serial.print(", Az = "); Serial.print(m_accelerometer[2]);
+            Serial.print(" | tmp = "); Serial.print(m_temperature / 340.00 + 36.53);
+            Serial.print(" | gX = "); Serial.print(m_gyro[0]);
+            Serial.print(", gY = "); Serial.print(m_gyro[1]);
+            Serial.print(", gZ = "); Serial.print(m_gyro[2]);
             Serial.println();
         }
 
@@ -66,6 +112,9 @@ class Accelerometer
         std::array<int16_t, 3> m_accelerometer;
         std::array<int16_t, 3> m_gyro;
         int16_t m_temperature;
-}
+
+        CircularBuffer<unsigned int, MOVEMENT_LENGTH> m_movements;
+        std::function<void(void)> m_onShaked;
+};
 
 #endif

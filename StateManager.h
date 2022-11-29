@@ -38,7 +38,12 @@ class StateManager
 
         void toggleSOSMode()
         {
-            m_sosToggled = !m_sosToggled;
+            enableSOSMode(!m_sosToggled);
+        }
+
+        void enableSOSMode(bool toggle)
+        {
+            m_sosToggled = toggle;
 
             for(const auto& toggleSensor : m_toggleSensors)
             {
