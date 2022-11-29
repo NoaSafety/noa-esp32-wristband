@@ -27,6 +27,7 @@
 #include "Message.h"
 #include "Position.h"
 #include "SOSWave.h"
+#include "Accelerometer.h"
 
 // --- Constants --- //
 #define APP_KEY             ("NOA_WRISTBAND")
@@ -44,6 +45,9 @@
 #define LORA_SS_PIN         (18)
 #define LORA_RST_PIN        (14)
 #define LORA_DIO0_PIN       (26)
+
+#define AXIS_SDA_PIN        (4)
+#define AXIS_SCL_PIN        (15)
 
 #define GPS_RX_PIN          (34) // 16
 #define GPS_TX_PIN          (38) // 17
@@ -74,6 +78,7 @@ auto display = std::make_shared<OledDisplay>(stateManager, SCREEN_WIDTH, SCREEN_
 
 auto rfidReader = RFIDReader(stateManager, RFID_SCK_PIN, RFID_MISO_PIN, RFID_MOSI_PIN, RFID_SDA_PIN, RFID_RST_PIN);
 auto gpsSensor = GPSSensor(stateManager, GPS_RX_PIN, GPS_TX_PIN);
+auto accelerometer = Accelerometer(AXIS_SDA_PIN, AXIS_SCL_PIN);
 auto heartBeatSensor = HeartBeatSensor(HEART_BEAT_PIN);
 auto buttonSensor = ButtonSensor(BUTTON_PIN);
 
@@ -85,6 +90,7 @@ Task btn_check_task(20, TASK_FOREVER, [] { buttonSensor.checkButton(); });
 Task buzzer_check_task(20, TASK_FOREVER, [] { buzzerSensor->update(); });
 Task led_check_task(20, TASK_FOREVER, [] { ledSensor->update(); });
 Task oled_refresh_task(1000, TASK_FOREVER, [] { display->update(); });
+Task axis_refresh_task(2000, TASK_FOREVER, [] { accelerometer->update(); });
 
 // --- Functions --- //
 void die(byte code)
@@ -116,6 +122,8 @@ void die(byte code)
             Serial.println("RFID module init (0x05)");
             break;
         case 0x06:
+            display->push_line("Accelerometer init (0x06)");
+            Serial.println("Accelerometer init (0x06)");
             break;
     }
     
@@ -148,6 +156,9 @@ void setup()
 
     if(!heartBeatSensor.begin())
         die(0x03); 
+
+    if(!accelerometer.begin())
+        die(0X05);
     
     delay(2000); // Fake loading time for the sake of being absolutes code masters
 
@@ -178,6 +189,7 @@ void setup_tasks() {
     runner.addTask(buzzer_check_task);
     runner.addTask(oled_refresh_task);
     runner.addTask(led_check_task);
+    runner.addTask(axis_refresh_task);
 
     lora_check_task.enable();
     gps_check_task.enable();
@@ -186,6 +198,7 @@ void setup_tasks() {
     buzzer_check_task.enable();
     oled_refresh_task.enable();
     led_check_task.enable();
+    axis_refresh_task.enable();
 }
 
 void loop() 
