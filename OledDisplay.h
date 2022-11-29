@@ -4,11 +4,13 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "IToggleSensor.h"
 
-class OledDisplay
+class OledDisplay : public IToggleSensor
 {
     public:
-        OledDisplay(int width, int height, int resetPin, int size, int sda, int scl) : 
+        OledDisplay(StateManager& state, int width, int height, int resetPin, int size, int sda, int scl) : 
+            m_state(state),
             m_display(width, height, &Wire, resetPin),
             m_size(size),
             m_lineSize(size * 10),
@@ -16,7 +18,8 @@ class OledDisplay
             m_width(width),
             m_height(height),
             m_sda(sda),
-            m_scl(scl)
+            m_scl(scl),
+            m_enabled(false)
         {
             
         }
@@ -56,7 +59,6 @@ class OledDisplay
             clear_line(m_line);
             m_display.setCursor(0, m_lineSize * m_line);
             m_display.print(text);
-            Serial.println(text);
             m_line ++;
             m_display.display();
         }
@@ -77,9 +79,32 @@ class OledDisplay
                 }
             }
         }
+
+        void update() override
+        {
+            set_line(4);
+            if(m_enabled)
+                push_line("SOS Mode: ON");
+            else
+                push_line("SOS Mode: OFF");
+
+            set_line(1);
+            push_line("UID: " + m_state.getUserId());
+        }
+
+        void enable(bool ena) override
+        {
+            m_enabled = ena;
+        }
+
+        void toggle() override
+        {
+            enable(!m_enabled);
+        }
         
     private:
         Adafruit_SSD1306 m_display;
+        StateManager& m_state;
         int m_size;
         int m_lineSize;
         int m_line;
@@ -87,6 +112,7 @@ class OledDisplay
         int m_height;
         int m_sda;
         int m_scl;
+        bool m_enabled;
 };
 
 #endif

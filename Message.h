@@ -3,12 +3,11 @@
 
 #include <stdarg.h>
 #include "ISerializable.h"
-#include "Position.h"
 
 class Message : public ISerializable
 {
     public:
-        Message(const Position& position) : m_position(position)
+        Message(const Position& position, const String& userId) : m_position(position), m_userId(userId)
         {
           
         }
@@ -16,12 +15,13 @@ class Message : public ISerializable
         String to_json() override
         {
             char data[128];
-            sprintf(data, "{\"longitude\":%f,\"latitude\":%f}", m_position.longitude(), m_position.latitude());
+            sprintf(data, "{\"userId\":\"%s\",\"longitude\":%f,\"latitude\":%f}", m_userId.c_str(), m_position.Longitude, m_position.Latitude);
             return data;
         }
 
     private:
         const Position &m_position;
+        const String &m_userId;
 };
 
 #endif
