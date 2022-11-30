@@ -52,7 +52,7 @@
 #define GPS_RX_PIN          (34) // 16
 #define GPS_TX_PIN          (38) // 17
 
-#define HEART_BEAT_PIN      (34) // ADC1_CH6
+#define HEART_BEAT_PIN      (38) // ADC1_CH6
 
 #define OLED_SDA_PIN        (4)
 #define OLED_SCL_PIN        (15) // 
@@ -89,8 +89,9 @@ Task rfid_check_task(1000, TASK_FOREVER, [] { rfidReader.checkRFID(); });
 Task btn_check_task(20, TASK_FOREVER, [] { buttonSensor.checkButton(); });
 Task buzzer_check_task(20, TASK_FOREVER, [] { buzzerSensor->update(); });
 Task led_check_task(20, TASK_FOREVER, [] { ledSensor->update(); });
-Task oled_refresh_task(1000, TASK_FOREVER, [] { display->update(); });
+Task oled_refresh_task(50, TASK_FOREVER, [] { display->update(); });
 Task axis_refresh_task(50, TASK_FOREVER, [] { accelerometer.update(); });
+Task heart_refresh_task(100, TASK_FOREVER, [] { heartBeatSensor.update(); });
 
 // --- Functions --- //
 void die(byte code)
@@ -144,6 +145,7 @@ void setup()
         
     display->set_line(0);
     display->push_line("Initializing...");
+    display->setLoading(true);
 
     if(!loraSender->begin()) 
         die(0x01);
@@ -151,8 +153,8 @@ void setup()
     /*if(!rfidReader.begin())
         die(0x05);*/
 
-    if(!gpsSensor.begin())
-        die(0x02);
+    /*if(!gpsSensor.begin())
+        die(0x02);*/
 
     if(!heartBeatSensor.begin())
         die(0x03); 
@@ -195,6 +197,7 @@ void setup_tasks() {
     runner.addTask(oled_refresh_task);
     runner.addTask(led_check_task);
     runner.addTask(axis_refresh_task);
+    runner.addTask(heart_refresh_task);
 
     lora_check_task.enable();
     gps_check_task.enable();
@@ -204,6 +207,7 @@ void setup_tasks() {
     oled_refresh_task.enable();
     led_check_task.enable();
     axis_refresh_task.enable();
+    heart_refresh_task.enable();
 }
 
 void loop() 

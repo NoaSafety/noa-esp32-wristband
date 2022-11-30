@@ -62,8 +62,6 @@ class Accelerometer
                 totalMovement += m_movements.get(i);
             }
 
-            Serial.println(totalMovement);
-
             if(totalMovement < 1500000)
             {
                 return false;

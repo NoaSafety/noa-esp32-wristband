@@ -5,6 +5,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "IToggleSensor.h"
+#include <cmath>
 
 class OledDisplay : public IToggleSensor
 {
@@ -82,6 +83,12 @@ class OledDisplay : public IToggleSensor
 
         void update() override
         {
+            if(m_loading)
+            {
+                update_loading();
+                return;
+            }
+            
             set_line(4);
             if(m_enabled)
                 push_line("SOS Mode: ON");
@@ -90,6 +97,45 @@ class OledDisplay : public IToggleSensor
 
             set_line(1);
             push_line("UID: " + m_state.getUserId());
+        }
+
+        void update_loading()
+        {
+            static int s = 0;
+            /* auto sliceSize = 208; // ms
+            auto normalizedMoment = millis() % 4992;
+            auto slice = normalizedMoment / sliceSize; */
+            auto pi = 3.141592;
+            auto distance = m_height * 0.45;
+            auto xCenter = m_width / 2;
+            auto yCenter = m_height / 2;
+            clear();
+
+            for(auto i = s; i < s + 5; i ++)
+            {
+                /* auto s = i % 24;
+                if(s < 0)
+                    s += 24; */
+                    
+                auto angle = (2 * pi) / i;
+                auto x = xCenter + (distance * sin(angle));
+                auto y = yCenter + (distance * cos(angle));
+
+                Serial.println(i);
+
+                m_display.drawPixel(x, y, WHITE); 
+            }
+            m_display.display();
+
+            if(++s == 24)
+                s = 0;
+            
+        }
+
+        void setLoading(bool toggle)
+        {
+            m_loading = toggle;
+            clear();
         }
 
         void enable(bool ena) override
@@ -105,6 +151,7 @@ class OledDisplay : public IToggleSensor
     private:
         Adafruit_SSD1306 m_display;
         StateManager& m_state;
+        bool m_loading;
         int m_size;
         int m_lineSize;
         int m_line;

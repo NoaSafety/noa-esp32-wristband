@@ -3,10 +3,6 @@
 #ifndef HEARTBEATSENSOR_INCLUDED
 #define HEARTBEATSENSOR_INCLUDED
 
-#ifndef USE_ARDUINO_INTERRUPTS
-    #define USE_ARDUINO_INTERRUPTS true
-#endif
-
 class HeartBeatSensor
 {
     public:
@@ -20,7 +16,7 @@ class HeartBeatSensor
         bool begin()
         {
             m_pulseSensor.analogInput(m_pin);
-            m_pulseSensor.setOutputType(SERIAL_PLOTTER);
+            // m_pulseSensor.setOutputType(SERIAL_PLOTTER);
             m_pulseSensor.setThreshold(m_threshold);
             return m_pulseSensor.begin();
         }
@@ -38,7 +34,7 @@ class HeartBeatSensor
                 m_beat = 0;
         }
 
-        inline int heartbeat()
+        inline int heartbeat() const
         {
             return m_beat;
         }
