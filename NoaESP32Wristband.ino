@@ -28,6 +28,7 @@
 #include "Position.h"
 #include "SOSWave.h"
 #include "Accelerometer.h"
+#include "MicSensor.h"
 
 // --- Constants --- //
 #define APP_KEY             ("NOA_WRISTBAND")
@@ -63,6 +64,7 @@
 #define BUTTON_PIN          (17)
 #define BUZZER_PIN          (21)
 #define LED_PIN             (13)
+#define MIC_PIN             (2)
 
 // --- Global Variables --- //
 Scheduler runner;
@@ -81,12 +83,14 @@ auto gpsSensor = GPSSensor(stateManager, GPS_RX_PIN, GPS_TX_PIN);
 auto accelerometer = Accelerometer(AXIS_SDA_PIN, AXIS_SCL_PIN);
 auto heartBeatSensor = HeartBeatSensor(HEART_BEAT_PIN);
 auto buttonSensor = ButtonSensor(BUTTON_PIN);
+auto micSensor = MicSensor(MIC_PIN);
 
 // --- Tasks --- //
 Task lora_check_task(5000, TASK_FOREVER, [] { loraSender->update(); });
 Task gps_check_task(5000, TASK_FOREVER, [] { gpsSensor.checkGPS(); });
 Task rfid_check_task(1000, TASK_FOREVER, [] { rfidReader.checkRFID(); });
 Task btn_check_task(20, TASK_FOREVER, [] { buttonSensor.checkButton(); });
+Task mic_check_task(20, TASK_FOREVER, [] { micSensor.checkMic(); });
 Task buzzer_check_task(20, TASK_FOREVER, [] { buzzerSensor->update(); });
 Task led_check_task(20, TASK_FOREVER, [] { ledSensor->update(); });
 Task oled_refresh_task(50, TASK_FOREVER, [] { display->update(); });
@@ -175,6 +179,11 @@ void setup()
     stateManager.addToggleSensor(loraSender);
     stateManager.addToggleSensor(display);
 
+    micSensor.setOnSound([]()
+    {
+        stateManager.enableSOSMode(true);
+    });
+
     buttonSensor.setOnPressedListener([](bool pressed) 
     { 
         stateManager.toggleSOSMode(); 
@@ -198,6 +207,7 @@ void setup_tasks() {
     runner.addTask(led_check_task);
     runner.addTask(axis_refresh_task);
     runner.addTask(heart_refresh_task);
+    runner.addTask(mic_check_task);
 
     lora_check_task.enable();
     gps_check_task.enable();
@@ -208,6 +218,7 @@ void setup_tasks() {
     led_check_task.enable();
     axis_refresh_task.enable();
     heart_refresh_task.enable();
+    mic_check_task.enable();
 }
 
 void loop() 
