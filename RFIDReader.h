@@ -31,7 +31,7 @@ class RFIDReader
 
         bool begin()
         {
-            takeSPILead()
+            takeSPILead();
             return m_mfrc522.PCD_ReadRegister(MFRC522::PCD_Register::VersionReg) == 0x92;
         }
 

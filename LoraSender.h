@@ -33,7 +33,7 @@ class LoRaSender : public IToggleSensor
 
         bool begin()
         {
-            takeSPILead()
+            takeSPILead();
             return LoRa.begin(m_band);
         }
 
