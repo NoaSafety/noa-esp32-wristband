@@ -24,11 +24,7 @@ class HeartBeatSensor
         void update()
         {
             auto test = analogRead(m_pin);
-            Serial.print(test);
-            Serial.write(" - ");
             m_beat = m_pulseSensor.getBeatsPerMinute();
-            Serial.write("Heartbeat: ");
-            Serial.println(m_beat);
 
             if(!m_pulseSensor.sawStartOfBeat())
                 m_beat = 0;
