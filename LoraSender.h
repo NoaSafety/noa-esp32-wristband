@@ -14,6 +14,7 @@ class LoRaSender : public IToggleSensor
             m_band(band),
             m_sck(sck),
             m_miso(miso),
+            m_mosi(mosi),
             m_ss(ss),
             m_rst(rst),
             m_dio0(dio0),
@@ -26,15 +27,13 @@ class LoRaSender : public IToggleSensor
         {
             SPI.end();
             SPI.begin(m_sck, m_miso, m_mosi, m_ss);
+            LoRa.setPins(m_ss, m_rst, m_dio0);
+            LoRa.begin(m_band);
         }
 
         bool begin()
         {
-            // SPI LoRa Pins
-            SPI.begin(m_sck, m_miso, m_mosi, m_ss);
-            // Setup LoRa transceiver module
-            LoRa.setPins(m_ss, m_rst, m_dio0);
-          
+            takeSPILead()
             return LoRa.begin(m_band);
         }
 

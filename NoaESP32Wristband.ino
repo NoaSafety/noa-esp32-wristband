@@ -139,25 +139,25 @@ void setup()
     SPI.begin();
     store.begin(APP_KEY, false);
     stateManager.loadData();
-        
+            
     if(!display->begin(OLED_RST)) 
         die(0x04);
         
     display->set_line(0);
     display->push_line("Initializing...");
-    display->setLoading(true);
+    // display->setLoading(true);
 
     if(!loraSender->begin()) 
         die(0x01);
 
-    /*if(!rfidReader.begin())
-        die(0x05);*/
+    if(!rfidReader.begin())
+        die(0x05);
 
     /*if(!gpsSensor.begin())
         die(0x02);*/
 
-    if(!heartBeatSensor.begin())
-        die(0x03); 
+    /*if(!heartBeatSensor.begin())
+        die(0x03); */
 
     if(!accelerometer.begin())
         die(0X05);
@@ -207,7 +207,7 @@ void setup_tasks() {
     oled_refresh_task.enable();
     led_check_task.enable();
     axis_refresh_task.enable();
-    heart_refresh_task.enable();
+    // heart_refresh_task.enable();
 }
 
 void loop() 

@@ -83,11 +83,11 @@ class OledDisplay : public IToggleSensor
 
         void update() override
         {
-            if(m_loading)
+            /* if(m_loading)
             {
                 update_loading();
                 return;
-            }
+            } */
             
             set_line(4);
             if(m_enabled)
