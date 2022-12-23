@@ -25,13 +25,13 @@ class RFIDReader
         {
             SPI.end();
             SPI.begin(m_sck, m_miso, m_mosi);
+            m_mfrc522.PCD_Init();
+            m_nfc.begin();   
         }
 
         bool begin()
         {
             takeSPILead();
-            m_mfrc522.PCD_Init();   
-            m_nfc.begin();
             return m_mfrc522.PCD_ReadRegister(MFRC522::PCD_Register::VersionReg) == 0x92;
         }
 

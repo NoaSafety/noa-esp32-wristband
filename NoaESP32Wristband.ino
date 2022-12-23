@@ -143,7 +143,7 @@ void setup()
     SPI.begin();
     store.begin(APP_KEY, false);
     stateManager.loadData();
-        
+            
     if(!display->begin(OLED_RST)) 
         die(0x04);
         
