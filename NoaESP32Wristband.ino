@@ -64,7 +64,7 @@
 #define BUTTON_PIN          (17)
 #define BUZZER_PIN          (21)
 #define LED_PIN             (13)
-#define MIC_PIN             (2)
+#define MIC_PIN             (36)
 
 // --- Global Variables --- //
 Scheduler runner;
@@ -94,7 +94,7 @@ Task mic_check_task(20, TASK_FOREVER, [] { micSensor.checkMic(); });
 Task buzzer_check_task(20, TASK_FOREVER, [] { buzzerSensor->update(); });
 Task led_check_task(20, TASK_FOREVER, [] { ledSensor->update(); });
 Task oled_refresh_task(50, TASK_FOREVER, [] { display->update(); });
-Task axis_refresh_task(50, TASK_FOREVER, [] { accelerometer.update(); });
+Task axis_refresh_task(100, TASK_FOREVER, [] { accelerometer.update(); });
 Task heart_refresh_task(100, TASK_FOREVER, [] { heartBeatSensor.update(); });
 
 // --- Functions --- //
@@ -149,22 +149,22 @@ void setup()
         
     display->set_line(0);
     display->push_line("Initializing...");
-    display->setLoading(true);
+    // display->setLoading(true);
 
     if(!loraSender->begin()) 
         die(0x01);
 
-    /*if(!rfidReader.begin())
-        die(0x05);*/
+    if(!rfidReader.begin())
+        die(0x05);
 
     /*if(!gpsSensor.begin())
         die(0x02);*/
 
-    if(!heartBeatSensor.begin())
-        die(0x03); 
+    /*if(!heartBeatSensor.begin())
+        die(0x03); */
 
     if(!accelerometer.begin())
-        die(0X05);
+        die(0X05); 
     
     delay(2000); // Fake loading time for the sake of being absolutes code masters
 
@@ -217,8 +217,8 @@ void setup_tasks() {
     oled_refresh_task.enable();
     led_check_task.enable();
     axis_refresh_task.enable();
-    heart_refresh_task.enable();
-    mic_check_task.enable();
+    // heart_refresh_task.enable();
+    // mic_check_task.enable();
 }
 
 void loop() 

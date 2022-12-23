@@ -42,7 +42,8 @@ class LoRaSender : public IToggleSensor
         {
             takeSPILead();
             LoRa.beginPacket();
-            LoRa.print(data);
+            // LoRa.print(data);
+            LoRa.println("Hello, World!");
             LoRa.endPacket();
             Serial.println("[LORA] " + data);
         }

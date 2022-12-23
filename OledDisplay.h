@@ -121,7 +121,7 @@ class OledDisplay : public IToggleSensor
                 auto x = xCenter + (distance * sin(angle));
                 auto y = yCenter + (distance * cos(angle));
 
-                Serial.println(i);
+                // Serial.println(i);
 
                 m_display.drawPixel(x, y, WHITE); 
             }
@@ -151,7 +151,7 @@ class OledDisplay : public IToggleSensor
     private:
         Adafruit_SSD1306 m_display;
         StateManager& m_state;
-        bool m_loading;
+        bool m_loading { false };
         int m_size;
         int m_lineSize;
         int m_line;

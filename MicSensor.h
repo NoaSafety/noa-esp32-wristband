@@ -47,7 +47,7 @@ class MicSensor
 
                     if(m_eventLength > m_threshold)
                     {
-                        onSwitchState(state);
+                        onSwitchState(LOW);
                     }
                 }
             }
@@ -55,7 +55,7 @@ class MicSensor
             {
                 if(m_prevMicState != state)
                 {
-                    onSwitchState(state);
+                    onSwitchState(HIGH);
                 }
             }
 
