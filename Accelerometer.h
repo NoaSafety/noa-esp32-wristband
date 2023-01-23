@@ -62,7 +62,7 @@ class Accelerometer
                 totalMovement += m_movements.get(i);
             }
 
-            if(totalMovement < 1500000)
+            if(totalMovement < 1000000)//1500000)
             {
                 return false;
             }

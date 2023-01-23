@@ -13,10 +13,16 @@ class MicSensor
 
         void checkMic()
         {
-            auto micState = digitalRead(m_pin);
+            /*auto micState = digitalRead(m_pin);
             update(micState);
             
+            m_prevMicState = micState;*/
+            int volume = (float) analogRead(m_pin) / (float) 1023 * 100; //calculate percentage of max analogue
+            auto micState = volume > 75 ? LOW : HIGH;
+            update(micState);
             m_prevMicState = micState;
+            
+            m_lastEvent = millis();
         }
 
         void setOnSound(std::function<void(void)> onSound)
@@ -30,24 +36,25 @@ class MicSensor
         unsigned long m_lastEvent { 0 };
         std::function<void(void)> m_onSound;
         unsigned long m_eventLength { 0 };
-        const unsigned long m_threshold { 500 };
+        // const unsigned long m_threshold { 500 };
+        const unsigned long m_threshold { 3 };
+        int m_ticks = 0;
 
         void update(int state)
         {
-            auto currentTime = millis();
+            unsigned long currentTime = millis();
             if(state == LOW)
             {
                 if(m_prevMicState == state)
                 {
                     if(m_lastEvent == 0)
-                        goto end;
-                        
-                    m_eventLength += currentTime - m_lastEvent;
-                    Serial.println("Event len " + m_eventLength);
+                        return;
 
-                    if(m_eventLength > m_threshold)
+                    m_ticks ++;
+                    if(m_ticks == m_threshold)
                     {
-                        onSwitchState(LOW);
+                        Serial.println("Reached");
+                        onSwitchState(true);
                     }
                 }
             }
@@ -55,24 +62,22 @@ class MicSensor
             {
                 if(m_prevMicState != state)
                 {
-                    onSwitchState(HIGH);
+                    onSwitchState(false);
                 }
             }
-
-            end:
-            m_lastEvent = millis();
         }
 
-        void onSwitchState(int state)
+        void onSwitchState(bool sound)
         {
-            if(state == LOW)
+            Serial.println("SwitchState");
+            if(sound)
             {
-                Serial.println("Toggle");
+                Serial.println("Sound !");
                 if(m_onSound)
                     m_onSound();
             }
 
-            m_eventLength = 0;
+            m_ticks = 0;
         }
 };
 

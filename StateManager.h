@@ -10,9 +10,9 @@ class StateManager
     public:
         StateManager(Preferences& store) : 
             m_store(store), 
-            m_sosToggled(false)
+            m_sosToggled(false),
+            m_position(50.62021924615207, 5.582367411365839)
         {
-          m_position = { .Latitude = 50.62021924615207, .Longitude = 5.582367411365839}; 
         }
 
         void loadData() 
@@ -51,12 +51,12 @@ class StateManager
             }
         }
 
-        Position getPosition() const
+        const Position& getPosition() const
         {
             return m_position;
         }
 
-        void setPosition(Position position)
+        void setPosition(const Position& position)
         {
             m_position.Longitude = position.Longitude;
             m_position.Latitude = position.Latitude;

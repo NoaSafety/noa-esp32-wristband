@@ -87,7 +87,7 @@ auto micSensor = MicSensor(MIC_PIN);
 
 // --- Tasks --- //
 Task lora_check_task(5000, TASK_FOREVER, [] { loraSender->update(); });
-Task gps_check_task(5000, TASK_FOREVER, [] { gpsSensor.checkGPS(); });
+Task gps_check_task(5000, TASK_FOREVER, [] { /* gpsSensor.checkGPS(); */ });
 Task rfid_check_task(1000, TASK_FOREVER, [] { rfidReader.checkRFID(); });
 Task btn_check_task(20, TASK_FOREVER, [] { buttonSensor.checkButton(); });
 Task mic_check_task(20, TASK_FOREVER, [] { micSensor.checkMic(); });
@@ -157,8 +157,8 @@ void setup()
     if(!rfidReader.begin())
         die(0x05);
 
-    /*if(!gpsSensor.begin())
-        die(0x02);*/
+    if(!gpsSensor.begin())
+        die(0x02);
 
     /*if(!heartBeatSensor.begin())
         die(0x03); */
@@ -181,6 +181,7 @@ void setup()
 
     micSensor.setOnSound([]()
     {
+        Serial.println("Toggle sound");
         stateManager.enableSOSMode(true);
     });
 
@@ -218,7 +219,7 @@ void setup_tasks() {
     led_check_task.enable();
     axis_refresh_task.enable();
     // heart_refresh_task.enable();
-    // mic_check_task.enable();
+    mic_check_task.enable();
 }
 
 void loop() 

@@ -7,7 +7,7 @@
 class Message : public ISerializable
 {
     public:
-        Message(const Position& position, const String& userId) : m_position(position), m_userId(userId)
+        Message(const Position &position, const String& userId) : m_position(position), m_userId(userId)
         {
           
         }
@@ -20,7 +20,7 @@ class Message : public ISerializable
         }
 
     private:
-        const Position &m_position;
+        Position m_position;
         const String &m_userId;
 };
 
